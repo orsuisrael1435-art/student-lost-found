@@ -48,23 +48,21 @@ const limiter = rateLimit({
 // Stricter rate limit for auth routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 50, // increased for production use
     message: { success: false, message: 'Too many authentication attempts, please try again after 15 minutes.' }
 });
 
 app.use('/api/', limiter);
 app.use('/api/auth/', authLimiter);
 
+// Request Logging — always on in production for debugging
+app.use(morgan('dev'));
+
 // ============================================================
 // Body Parsing Middleware
 // ============================================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Request Logging
-if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
-}
 
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
