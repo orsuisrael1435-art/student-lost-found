@@ -105,6 +105,17 @@ app.get('/', (req, res) => {
     });
 });
 
+// Debug endpoint — shows env var status (remove after fix)
+app.get('/api/debug-env', (req, res) => {
+    res.json({
+        JWT_SECRET_SET: !!process.env.JWT_SECRET,
+        JWT_SECRET_LEN: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0,
+        DATABASE_URL_SET: !!process.env.DATABASE_URL,
+        NODE_ENV: process.env.NODE_ENV,
+        BCRYPT_ROUNDS: process.env.BCRYPT_SALT_ROUNDS,
+    });
+});
+
 // ============================================================
 // Health Check Route
 // ============================================================
