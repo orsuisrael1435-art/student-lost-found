@@ -25,7 +25,7 @@ export default function MatchDetail() {
       .catch(() => { toast.error('Match not found'); navigate('/matches'); })
       .finally(() => setLoading(false));
 
-  useEffect(() => { loadMatch(); }, [id]);
+  useEffect(() => { loadMatch(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isOwner = user?.id === match?.owner_id;
   const isFinder = user?.id === match?.finder_id;

@@ -4,7 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function Messages() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // eslint-disable-line no-unused-vars
   const [matches, setMatches] = useState([]);
   const [activeMatch, setActiveMatch] = useState(null);
   const [messages, setMessages] = useState([]);
