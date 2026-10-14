@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: student-lost-found-api
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: BCRYPT_SALT_ROUNDS
+        value: 12
+      - key: MAX_FILE_SIZE
+        value: 5242880
+      - key: DATABASE_URL
+        fromDatabase:
+          name: student-lost-found-db
+          property: connectionString
+
+databases:
+  - name: student-lost-found-db
+    databaseName: student_lost_found
+    user: postgres
+    plan: free
