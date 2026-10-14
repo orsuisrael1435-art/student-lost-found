@@ -63,13 +63,13 @@ INSERT INTO rooms (building_id, room_number, floor) VALUES
 -- bcrypt hash of 'Password@123' with 12 rounds
 -- ============================================================
 INSERT INTO users (student_id, name, email, phone, department, year, section, password_hash, role) VALUES
-('ADMIN001', 'Dr. Rajesh Kumar', 'admin@college.edu', '9876543210', 'Administration', NULL, NULL, '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'admin'),
-('SUPER001', 'Prof. Ananya Singh', 'superadmin@college.edu', '9876543200', 'Administration', NULL, NULL, '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'superadmin'),
-('21CSE001', 'Israel Orsu', 'israel@college.edu', '9876501234', 'CSE', 4, 'A', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'student'),
-('21CSE002', 'Priya Sharma', 'priya@college.edu', '9876502345', 'CSE', 4, 'A', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'student'),
-('21CSE003', 'Rahul Verma', 'rahul@college.edu', '9876503456', 'CSE', 3, 'B', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'student'),
-('21ECE001', 'Sneha Patel', 'sneha@college.edu', '9876504567', 'ECE', 2, 'A', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'student'),
-('21MBA001', 'Arjun Mehta', 'arjun@college.edu', '9876505678', 'MBA', 1, 'A', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TdmNkfzk5NEAFYy7M73JqQ0zHwPi', 'student');
+('ADMIN001', 'Dr. Rajesh Kumar', 'admin@college.edu', '9876543210', 'Administration', NULL, NULL, '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'admin'),
+('SUPER001', 'Prof. Ananya Singh', 'superadmin@college.edu', '9876543200', 'Administration', NULL, NULL, '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'superadmin'),
+('21CSE001', 'Israel Orsu', 'israel@college.edu', '9876501234', 'CSE', 4, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
+('21CSE002', 'Priya Sharma', 'priya@college.edu', '9876502345', 'CSE', 4, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
+('21CSE003', 'Rahul Verma', 'rahul@college.edu', '9876503456', 'CSE', 3, 'B', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
+('21ECE001', 'Sneha Patel', 'sneha@college.edu', '9876504567', 'ECE', 2, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
+('21MBA001', 'Arjun Mehta', 'arjun@college.edu', '9876505678', 'MBA', 1, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student');
 
 -- ============================================================
 -- DEMO LOST ITEMS
