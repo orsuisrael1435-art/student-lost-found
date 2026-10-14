@@ -15,41 +15,41 @@ const app = express();
 // Security Middleware
 // ============================================================
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' } // Allow images
+    crossOriginResourcePolicy: { policy: 'cross-origin' } // Allow images
 }));
 
 // CORS Configuration — allow local dev + Vercel production
 const allowedOrigins = [
-  'http://localhost:3000',
-  process.env.CLIENT_URL,
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+    'http://localhost:3000',
+    process.env.CLIENT_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
 ].filter(Boolean);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate Limiting - Protect against brute force
 const limiter = rateLimit({
-  windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
-  message: { success: false, message: 'Too many requests, please try again later.' }
+    windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 * 1000,
+    max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+    message: { success: false, message: 'Too many requests, please try again later.' }
 });
 
 // Stricter rate limit for auth routes
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { success: false, message: 'Too many authentication attempts, please try again after 15 minutes.' }
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { success: false, message: 'Too many authentication attempts, please try again after 15 minutes.' }
 });
 
 app.use('/api/', limiter);
@@ -63,7 +63,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request Logging
 if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+    app.use(morgan('dev'));
 }
 
 // Static file serving for uploads
@@ -96,55 +96,66 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/buildings', buildingRoutes);
 
+
+// ============================================================
+// Home Route
+// ============================================================
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Student Lost & Found Portal API is running!'
+    });
+});
+
 // ============================================================
 // Health Check Route
 // ============================================================
 app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Student Lost & Found Portal API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
-  });
+    res.json({
+        success: true,
+        message: 'Student Lost & Found Portal API is running',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV
+    });
 });
 
 // ============================================================
 // 404 Handler
 // ============================================================
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.method} ${req.originalUrl} not found`
-  });
+    res.status(404).json({
+        success: false,
+        message: `Route ${req.method} ${req.originalUrl} not found`
+    });
 });
 
 // ============================================================
 // Global Error Handler
 // ============================================================
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  
-  if (err.type === 'entity.too.large') {
-    return res.status(413).json({ success: false, message: 'File too large. Maximum size is 5MB.' });
-  }
-  
-  if (err.name === 'MulterError') {
-    return res.status(400).json({ success: false, message: err.message });
-  }
-  
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({ success: false, message: 'Invalid token.' });
-  }
-  
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({ success: false, message: 'Token has expired.' });
-  }
-  
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+    console.error('Error:', err.message);
+
+    if (err.type === 'entity.too.large') {
+        return res.status(413).json({ success: false, message: 'File too large. Maximum size is 5MB.' });
+    }
+
+    if (err.name === 'MulterError') {
+        return res.status(400).json({ success: false, message: err.message });
+    }
+
+    if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({ success: false, message: 'Invalid token.' });
+    }
+
+    if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ success: false, message: 'Token has expired.' });
+    }
+
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Internal server error',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
 });
 
 // ============================================================
@@ -152,7 +163,7 @@ app.use((err, req, res, next) => {
 // ============================================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`
+    console.log(`
   ╔═══════════════════════════════════════╗
   ║   Student Lost & Found Portal API    ║
   ║   Running on port ${PORT}              ║
