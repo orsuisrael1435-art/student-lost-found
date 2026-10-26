@@ -71,4 +71,18 @@ const getMyLostItems = async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, message: 'Failed to fetch your items.' }); }
 };
 
-module.exports = { getLostItems, getLostItem, createLostItem, updateLostItem, deleteLostItem, getMyLostItems };
+const updateLostItemStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const item = await LostItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ success: false, message: 'Lost item not found.' });
+    const isOwner = item.user_id.toString() === req.user._id.toString();
+    const isAdmin = ['admin', 'superadmin'].includes(req.user.role);
+    if (!isOwner && !isAdmin) return res.status(403).json({ success: false, message: 'Not authorized.' });
+    item.status = status;
+    await item.save();
+    res.json({ success: true, message: 'Status updated successfully.', item });
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to update status.' }); }
+};
+
+module.exports = { getLostItems, getLostItem, createLostItem, updateLostItem, deleteLostItem, getMyLostItems, updateLostItemStatus };

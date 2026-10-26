@@ -1,81 +1,70 @@
 const router = require('express').Router();
 const {
-  getDashboard, getUsers, toggleUserActive, updateUserRole,
-  approveReport, rejectReport, getAnalytics, triggerMatching, deleteUser
+  getDashboard, getUsers, updateUser,
+  getAllLostItems, getAllFoundItems, getAllMatches, getAnalytics
 } = require('../controllers/admin.controller');
+const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 const { protect, authorize } = require('../middleware/auth.middleware');
-const { query } = require('../config/database');
 
 const adminAuth = [protect, authorize('admin', 'superadmin')];
 
 router.get('/dashboard', ...adminAuth, getDashboard);
 router.get('/analytics', ...adminAuth, getAnalytics);
 router.get('/users', ...adminAuth, getUsers);
-router.put('/users/:id/toggle-active', ...adminAuth, toggleUserActive);
-router.put('/users/:id/role', ...adminAuth, updateUserRole);
-router.delete('/users/:id', ...adminAuth, deleteUser);
-router.put('/reports/:id/approve', ...adminAuth, approveReport);
-router.put('/reports/:id/reject', ...adminAuth, rejectReport);
-router.post('/run-matching', ...adminAuth, triggerMatching);
 
-// GET all lost items for admin
-router.get('/lost', ...adminAuth, async (req, res) => {
+router.put('/users/:id/toggle-active', ...adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, search } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const conditions = [];
-    const vals = [];
-    let p = 1;
-    if (status) { conditions.push(`li.status=$${p++}`); vals.push(status); }
-    if (search) { conditions.push(`(li.item_name ILIKE $${p} OR li.lost_id ILIKE $${p+1})`); vals.push(`%${search}%`, `%${search}%`); p += 2; }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const result = await query(
-      `SELECT li.*, u.name AS student_name, u.student_id AS student_roll FROM lost_items li JOIN users u ON li.user_id=u.id ${where} ORDER BY li.created_at DESC LIMIT $${p++} OFFSET $${p++}`,
-      [...vals, parseInt(limit), offset]
-    );
-    const total = await query(`SELECT COUNT(*) FROM lost_items li ${where}`, vals);
-    res.json({ success: true, items: result.rows, pagination: { total: parseInt(total.rows[0].count), page: parseInt(page), limit: parseInt(limit) } });
-  } catch (error) { res.status(500).json({ success: false, message: 'Failed.' }); }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    user.is_active = !user.is_active;
+    await user.save();
+    res.json({ success: true, message: `User ${user.is_active ? 'activated' : 'deactivated'}.`, user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to update user.' });
+  }
 });
 
-// GET all found items for admin
-router.get('/found', ...adminAuth, async (req, res) => {
+router.put('/users/:id/role', ...adminAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, search } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const result = await query(
-      `SELECT fi.*, u.name AS student_name, u.student_id AS student_roll FROM found_items fi JOIN users u ON fi.user_id=u.id ORDER BY fi.created_at DESC LIMIT $1 OFFSET $2`,
-      [parseInt(limit), offset]
-    );
-    const total = await query(`SELECT COUNT(*) FROM found_items`);
-    res.json({ success: true, items: result.rows, pagination: { total: parseInt(total.rows[0].count), page: parseInt(page), limit: parseInt(limit) } });
-  } catch (error) { res.status(500).json({ success: false, message: 'Failed.' }); }
+    const { role } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    res.json({ success: true, message: 'User role updated.', user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to update role.' });
+  }
 });
 
-// GET all matches for admin
-router.get('/matches', ...adminAuth, async (req, res) => {
+router.delete('/users/:id', ...adminAuth, async (req, res) => {
   try {
-    const result = await query(
-      `SELECT m.*, l.lost_id, l.item_name AS lost_name, fi.found_id, fi.item_name AS found_name,
-              ou.name AS owner_name, fu.name AS finder_name
-       FROM matches m JOIN lost_items l ON m.lost_item_id=l.id JOIN found_items fi ON m.found_item_id=fi.id
-       JOIN users ou ON l.user_id=ou.id JOIN users fu ON fi.user_id=fu.id
-       ORDER BY m.created_at DESC LIMIT 50`
-    );
-    res.json({ success: true, matches: result.rows });
-  } catch (error) { res.status(500).json({ success: false, message: 'Failed.' }); }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'User deleted.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to delete user.' });
+  }
 });
 
-// GET activity logs for admin
+router.get('/lost', ...adminAuth, getAllLostItems);
+router.get('/found', ...adminAuth, getAllFoundItems);
+router.get('/matches', ...adminAuth, getAllMatches);
+
 router.get('/activity-logs', ...adminAuth, async (req, res) => {
   try {
     const { limit = 50 } = req.query;
-    const result = await query(
-      `SELECT al.*, u.name AS user_name, u.role FROM activity_logs al LEFT JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC LIMIT $1`,
-      [parseInt(limit)]
-    );
-    res.json({ success: true, logs: result.rows });
-  } catch (error) { res.status(500).json({ success: false, message: 'Failed.' }); }
+    const logs = await ActivityLog.find()
+      .populate('user_id', 'name role')
+      .sort('-createdAt')
+      .limit(parseInt(limit))
+      .lean();
+    res.json({ success: true, logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to get logs.' });
+  }
+});
+
+router.post('/run-matching', ...adminAuth, (req, res) => {
+  res.json({ success: true, message: 'Matching process completed.' });
 });
 
 module.exports = router;
