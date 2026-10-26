@@ -1,62 +1,37 @@
-// ============================================================
-// Notification Controller
-// ============================================================
-const { query } = require('../config/database');
+const Notification = require('../models/Notification');
 
-// GET /api/notifications
 const getNotifications = async (req, res) => {
   try {
-    const { page = 1, limit = 20, unread_only } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const conditions = ['user_id=$1'];
-    const vals = [req.user.id];
-    if (unread_only === 'true') { conditions.push('is_read=false'); }
-
-    const where = `WHERE ${conditions.join(' AND ')}`;
-    const [notifs, total, unreadCount] = await Promise.all([
-      query(
-        `SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-        [...vals, parseInt(limit), offset]
-      ),
-      query(`SELECT COUNT(*) FROM notifications ${where}`, vals),
-      query('SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=false', [req.user.id])
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [notifications, total, unread_count] = await Promise.all([
+      Notification.find({ user_id: req.user._id }).sort('-createdAt').skip(skip).limit(parseInt(limit)).lean(),
+      Notification.countDocuments({ user_id: req.user._id }),
+      Notification.countDocuments({ user_id: req.user._id, is_read: false }),
     ]);
-
-    res.json({
-      success: true,
-      notifications: notifs.rows,
-      unread_count: parseInt(unreadCount.rows[0].count),
-      pagination: {
-        page: parseInt(page), limit: parseInt(limit),
-        total: parseInt(total.rows[0].count)
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to load notifications.' });
-  }
+    res.json({ success: true, notifications, total, unread_count, page: parseInt(page) });
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to get notifications.' }); }
 };
 
-// PUT /api/notifications/:id/read
-const markAsRead = async (req, res) => {
+const markRead = async (req, res) => {
   try {
-    await query(
-      'UPDATE notifications SET is_read=true WHERE id=$1 AND user_id=$2',
-      [req.params.id, req.user.id]
-    );
-    res.json({ success: true, message: 'Notification marked as read.' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed.' });
-  }
+    await Notification.findOneAndUpdate({ _id: req.params.id, user_id: req.user._id }, { is_read: true });
+    res.json({ success: true, message: 'Marked as read.' });
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to mark read.' }); }
 };
 
-// PUT /api/notifications/read-all
-const markAllAsRead = async (req, res) => {
+const markAllRead = async (req, res) => {
   try {
-    await query('UPDATE notifications SET is_read=true WHERE user_id=$1 AND is_read=false', [req.user.id]);
+    await Notification.updateMany({ user_id: req.user._id, is_read: false }, { is_read: true });
     res.json({ success: true, message: 'All notifications marked as read.' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed.' });
-  }
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to mark all read.' }); }
 };
 
-module.exports = { getNotifications, markAsRead, markAllAsRead };
+const deleteNotification = async (req, res) => {
+  try {
+    await Notification.findOneAndDelete({ _id: req.params.id, user_id: req.user._id });
+    res.json({ success: true, message: 'Notification deleted.' });
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to delete notification.' }); }
+};
+
+module.exports = { getNotifications, markRead, markAllRead, deleteNotification };

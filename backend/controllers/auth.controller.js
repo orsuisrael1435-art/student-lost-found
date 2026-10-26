@@ -1,110 +1,77 @@
-// ============================================================
-// Authentication Controller
-// ============================================================
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { query } = require('../config/database');
-const { createNotification } = require('../utils/notification.helper');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
+const ActivityLog = require('../models/ActivityLog');
 
 const generateToken = (userId, role) =>
   jwt.sign({ id: userId, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE || '7d' });
 
-// POST /api/auth/register
 const register = async (req, res) => {
   try {
     const { name, student_id, email, phone, department, year, section, password } = req.body;
+    const exists = await User.findOne({ $or: [{ email: email.toLowerCase() }, { student_id }] });
+    if (exists) return res.status(409).json({ success: false, message: 'Email or Student ID already exists.' });
 
-    const existing = await query(
-      'SELECT id FROM users WHERE LOWER(email) = LOWER($1) OR student_id = $2',
-      [email, student_id]
-    );
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ success: false, message: 'Email or Student ID already registered.' });
-    }
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
+    const password_hash = await bcrypt.hash(password, saltRounds);
 
-    const password_hash = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12);
+    const user = await User.create({ student_id, name, email: email.toLowerCase(), phone: phone || null, department, year: year || null, section: section || null, password_hash, role: 'student' });
 
-    const result = await query(
-      `INSERT INTO users (student_id, name, email, phone, department, year, section, password_hash, role)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'student')
-       RETURNING id, student_id, name, email, department, year, section, role, created_at`,
-      [student_id, name, email.toLowerCase(), phone || null, department, year || null, section || null, password_hash]
-    );
+    await Notification.create({ user_id: user._id, title: 'Welcome to Lost & Found Portal! 🎉', message: 'Your account has been created successfully.', type: 'info' });
+    await ActivityLog.create({ user_id: user._id, action: 'USER_REGISTERED', description: `New student: ${name} (${student_id})`, ip_address: req.ip });
 
-    const user = result.rows[0];
-    await createNotification(user.id, 'Welcome to Lost & Found Portal! 🎉',
-      'Your account is created. Start reporting lost/found items to help your campus community.', 'info');
-    await query('INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES ($1,$2,$3,$4)',
-      [user.id, 'USER_REGISTERED', `New student: ${name} (${student_id})`, req.ip]);
-
-    res.status(201).json({ success: true, message: 'Account created successfully!', token: generateToken(user.id, user.role), user });
+    const token = generateToken(user._id, user.role);
+    res.status(201).json({ success: true, message: 'Account created successfully!', token, user: { id: user._id, student_id: user.student_id, name: user.name, email: user.email, department: user.department, role: user.role } });
   } catch (error) {
-    console.error('Register:', error);
+    console.error('Register error:', error);
     res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
   }
 };
 
-// POST /api/auth/login
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    const result = await query(
-      `SELECT id, student_id, name, email, phone, department, year, section,
-              password_hash, role, profile_image, is_active
-       FROM users WHERE LOWER(email) = LOWER($1) OR student_id = $1`,
-      [email.trim()]
-    );
-
-    if (!result.rows.length) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
-    const user = result.rows[0];
+    const user = await User.findOne({ $or: [{ email: email.toLowerCase().trim() }, { student_id: email.trim() }] });
+    if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     if (!user.is_active) return res.status(401).json({ success: false, message: 'Account deactivated. Contact admin.' });
 
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) return res.status(401).json({ success: false, message: 'Invalid credentials.' });
 
-    await query('INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES ($1,$2,$3,$4)',
-      [user.id, 'USER_LOGIN', `Login: ${user.name}`, req.ip]);
+    await ActivityLog.create({ user_id: user._id, action: 'USER_LOGIN', description: `Login: ${user.name}`, ip_address: req.ip });
+    const token = generateToken(user._id, user.role);
 
-    delete user.password_hash;
-    res.json({ success: true, message: 'Login successful.', token: generateToken(user.id, user.role), user });
+    res.json({ success: true, message: 'Login successful.', token, user: { id: user._id, student_id: user.student_id, name: user.name, email: user.email, phone: user.phone, department: user.department, year: user.year, section: user.section, role: user.role, profile_image: user.profile_image, is_active: user.is_active } });
   } catch (error) {
-    console.error('Login:', error);
+    console.error('Login error:', error);
     res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
   }
 };
 
-// POST /api/auth/logout
 const logout = async (req, res) => {
-  if (req.user) {
-    await query('INSERT INTO activity_logs (user_id, action, description) VALUES ($1,$2,$3)',
-      [req.user.id, 'USER_LOGOUT', `Logout: ${req.user.name}`]).catch(() => {});
-  }
-  res.json({ success: true, message: 'Logged out successfully.' });
+  try {
+    if (req.user) await ActivityLog.create({ user_id: req.user._id, action: 'USER_LOGOUT', description: `Logout: ${req.user.name}` });
+    res.json({ success: true, message: 'Logged out successfully.' });
+  } catch { res.json({ success: true, message: 'Logged out.' }); }
 };
 
-// POST /api/auth/forgot-password
 const forgotPassword = async (req, res) => {
-  // Always respond success for security (don't reveal email existence)
-  res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
+  res.json({ success: true, message: 'If this email exists, a reset link has been sent.' });
 };
 
-// GET /api/auth/me
 const getMe = async (req, res) => {
   try {
-    const result = await query(
-      `SELECT u.id, u.student_id, u.name, u.email, u.phone, u.department, u.year, u.section,
-              u.role, u.profile_image, u.created_at,
-              (SELECT COUNT(*) FROM lost_items WHERE user_id = u.id) AS lost_count,
-              (SELECT COUNT(*) FROM found_items WHERE user_id = u.id) AS found_count,
-              (SELECT COUNT(*) FROM lost_items WHERE user_id = u.id AND status='returned') AS returned_count
-       FROM users u WHERE u.id = $1`,
-      [req.user.id]
-    );
-    if (!result.rows.length) return res.status(404).json({ success: false, message: 'User not found.' });
-    res.json({ success: true, user: result.rows[0] });
+    const user = await User.findById(req.user._id).select('-password_hash');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    const [lostCount, foundCount, returnedCount] = await Promise.all([
+      require('../models/LostItem').countDocuments({ user_id: req.user._id }),
+      require('../models/FoundItem').countDocuments({ user_id: req.user._id }),
+      require('../models/LostItem').countDocuments({ user_id: req.user._id, status: 'returned' }),
+    ]);
+    res.json({ success: true, user: { ...user.toObject(), lost_count: lostCount, found_count: foundCount, returned_count: returnedCount } });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to get user.' });
+    res.status(500).json({ success: false, message: 'Failed to get user data.' });
   }
 };
 

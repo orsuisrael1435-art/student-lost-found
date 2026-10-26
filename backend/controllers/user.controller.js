@@ -1,100 +1,78 @@
-// ============================================================
-// User / Dashboard Controller
-// ============================================================
 const bcrypt = require('bcryptjs');
-const { query } = require('../config/database');
+const User = require('../models/User');
+const LostItem = require('../models/LostItem');
+const FoundItem = require('../models/FoundItem');
+const Match = require('../models/Match');
+const Notification = require('../models/Notification');
 
-// GET /api/users/profile
 const getProfile = async (req, res) => {
   try {
-    const result = await query(
-      `SELECT u.id, u.student_id, u.name, u.email, u.phone, u.department, u.year, u.section,
-              u.role, u.profile_image, u.created_at,
-              (SELECT COUNT(*) FROM lost_items WHERE user_id = u.id) AS total_lost,
-              (SELECT COUNT(*) FROM found_items WHERE user_id = u.id) AS total_found,
-              (SELECT COUNT(*) FROM lost_items WHERE user_id = u.id AND status='returned') AS items_returned
-       FROM users u WHERE u.id = $1`,
-      [req.user.id]
-    );
-    res.json({ success: true, profile: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to load profile.' });
-  }
+    const user = await User.findById(req.user._id).select('-password_hash');
+    if (!user) return res.status(404).json({ success: false, message: 'Profile not found.' });
+    const [total_lost, total_found, items_returned] = await Promise.all([
+      LostItem.countDocuments({ user_id: req.user._id }),
+      FoundItem.countDocuments({ user_id: req.user._id }),
+      LostItem.countDocuments({ user_id: req.user._id, status: 'returned' }),
+    ]);
+    res.json({ success: true, profile: { ...user.toObject(), total_lost, total_found, items_returned } });
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to get profile.' }); }
 };
 
-// PUT /api/users/profile
 const updateProfile = async (req, res) => {
   try {
     const { name, phone, department, year, section } = req.body;
-    const fields = [], vals = [];
-    let p = 1;
-    if (name) { fields.push(`name=$${p++}`); vals.push(name); }
-    if (phone) { fields.push(`phone=$${p++}`); vals.push(phone); }
-    if (department) { fields.push(`department=$${p++}`); vals.push(department); }
-    if (year) { fields.push(`year=$${p++}`); vals.push(year); }
-    if (section) { fields.push(`section=$${p++}`); vals.push(section); }
-    if (req.file) { fields.push(`profile_image=$${p++}`); vals.push(`/uploads/profiles/${req.file.filename}`); }
-    if (!fields.length) return res.status(400).json({ success: false, message: 'No fields to update.' });
-    vals.push(req.user.id);
-    const r = await query(
-      `UPDATE users SET ${fields.join(',')}, updated_at=NOW() WHERE id=$${p} RETURNING id,name,email,phone,department,year,section,profile_image`,
-      vals
-    );
-    res.json({ success: true, message: 'Profile updated.', user: r.rows[0] });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to update profile.' });
-  }
+    const updates = {};
+    if (name) updates.name = name;
+    if (phone) updates.phone = phone;
+    if (department) updates.department = department;
+    if (year) updates.year = year;
+    if (section) updates.section = section;
+    if (req.file) updates.profile_image = `/uploads/profiles/${req.file.filename}`;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, message: 'No fields to update.' });
+    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true }).select('-password_hash');
+    res.json({ success: true, message: 'Profile updated.', user });
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to update profile.' }); }
 };
 
-// PUT /api/users/change-password
 const changePassword = async (req, res) => {
   try {
     const { current_password, new_password } = req.body;
-    const r = await query('SELECT password_hash FROM users WHERE id=$1', [req.user.id]);
-    const valid = await bcrypt.compare(current_password, r.rows[0].password_hash);
-    if (!valid) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
-    const hash = await bcrypt.hash(new_password, parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12);
-    await query('UPDATE users SET password_hash=$1, updated_at=NOW() WHERE id=$2', [hash, req.user.id]);
+    const user = await User.findById(req.user._id);
+    const isValid = await bcrypt.compare(current_password, user.password_hash);
+    if (!isValid) return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
+    user.password_hash = await bcrypt.hash(new_password, saltRounds);
+    await user.save();
     res.json({ success: true, message: 'Password changed successfully.' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to change password.' });
-  }
+  } catch (error) { res.status(500).json({ success: false, message: 'Failed to change password.' }); }
 };
 
-// GET /api/users/dashboard
 const getDashboard = async (req, res) => {
   try {
-    const uid = req.user.id;
-    const [[lc, fc, mc, rc, un], recentLost, recentFound, activeMatches] = await Promise.all([
-      Promise.all([
-        query('SELECT COUNT(*) FROM lost_items WHERE user_id=$1', [uid]),
-        query('SELECT COUNT(*) FROM found_items WHERE user_id=$1', [uid]),
-        query(`SELECT COUNT(*) FROM matches m JOIN lost_items l ON m.lost_item_id=l.id WHERE l.user_id=$1 AND m.status NOT IN ('false_match','closed')`, [uid]),
-        query(`SELECT COUNT(*) FROM lost_items WHERE user_id=$1 AND status='returned'`, [uid]),
-        query('SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=false', [uid])
-      ]),
-      query(`SELECT id,lost_id,item_name,category,colour,brand,building,room_number,lost_date,status,image_url,created_at FROM lost_items WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5`, [uid]),
-      query(`SELECT id,found_id,item_name,category,colour,brand,building,room_number,found_date,status,image_url,created_at FROM found_items WHERE user_id=$1 ORDER BY created_at DESC LIMIT 5`, [uid]),
-      query(`SELECT m.id,m.match_score,m.status AS match_status,l.item_name AS lost_item_name,l.lost_id,l.colour,fi.item_name AS found_item_name,fi.found_id,fi.building,fi.room_number FROM matches m JOIN lost_items l ON m.lost_item_id=l.id JOIN found_items fi ON m.found_item_id=fi.id WHERE l.user_id=$1 AND m.status NOT IN ('false_match','closed') ORDER BY m.match_score DESC LIMIT 5`, [uid])
+    const userId = req.user._id;
+    const [lostCount, foundCount, returnedCount, unreadNotif, recentLost, recentFound, activeMatches] = await Promise.all([
+      LostItem.countDocuments({ user_id: userId }),
+      FoundItem.countDocuments({ user_id: userId }),
+      LostItem.countDocuments({ user_id: userId, status: 'returned' }),
+      Notification.countDocuments({ user_id: userId, is_read: false }),
+      LostItem.find({ user_id: userId }).sort({ createdAt: -1 }).limit(5).lean(),
+      FoundItem.find({ user_id: userId }).sort({ createdAt: -1 }).limit(5).lean(),
+      Match.find({ owner_id: userId, status: { $nin: ['false_match', 'closed'] } })
+        .populate('lost_item_id', 'item_name lost_id category colour')
+        .populate('found_item_id', 'item_name found_id building room_number')
+        .sort({ match_score: -1 }).limit(5).lean(),
     ]);
-
     res.json({
       success: true,
       dashboard: {
-        stats: {
-          my_lost_items: parseInt(lc.rows[0].count),
-          my_found_items: parseInt(fc.rows[0].count),
-          possible_matches: parseInt(mc.rows[0].count),
-          returned_items: parseInt(rc.rows[0].count),
-          unread_notifications: parseInt(un.rows[0].count)
-        },
-        recent_lost: recentLost.rows,
-        recent_found: recentFound.rows,
-        active_matches: activeMatches.rows
+        stats: { my_lost_items: lostCount, my_found_items: foundCount, returned_items: returnedCount, possible_matches: activeMatches.length, unread_notifications: unreadNotif },
+        recent_lost: recentLost,
+        recent_found: recentFound,
+        active_matches: activeMatches,
       }
     });
   } catch (error) {
-    console.error('Dashboard:', error);
+    console.error('Dashboard error:', error);
     res.status(500).json({ success: false, message: 'Failed to load dashboard.' });
   }
 };
