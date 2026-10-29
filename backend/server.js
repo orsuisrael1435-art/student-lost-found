@@ -8,7 +8,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-const connectDB = require('./config/database');
+const { connectDB, isDbConnected, getLastDbError } = require('./config/database');
 
 // Connect to MongoDB
 connectDB();
@@ -56,6 +56,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============================================================
+// Database Availability Check Middleware for API
+// ============================================================
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next();
+  if (!isDbConnected()) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database is currently connecting or unavailable. If you are the admin, please ensure 0.0.0.0/0 is whitelisted in MongoDB Atlas Network Access and the cluster is active.',
+      dbError: getLastDbError()
+    });
+  }
+  next();
+});
+
+// ============================================================
 // API Routes
 // ============================================================
 app.use('/api/auth',          require('./routes/auth.routes'));
@@ -74,7 +89,16 @@ app.use('/api/buildings',     require('./routes/building.routes'));
 // Home & Health Routes
 // ============================================================
 app.get('/', (req, res) => res.json({ success: true, message: 'Student Lost & Found Portal API (MongoDB) is running!' }));
-app.get('/api/health', (req, res) => res.json({ success: true, message: 'Healthy', db: 'MongoDB', timestamp: new Date().toISOString() }));
+app.get('/api/health', (req, res) => {
+  const connected = isDbConnected();
+  res.status(connected ? 200 : 503).json({
+    success: connected,
+    message: connected ? 'Healthy' : 'Database disconnected',
+    db: connected ? 'MongoDB Connected' : 'MongoDB Disconnected',
+    error: connected ? null : getLastDbError(),
+    timestamp: new Date().toISOString()
+  });
+});
 
 // ============================================================
 // 404 Handler
