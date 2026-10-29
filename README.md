@@ -47,7 +47,7 @@ A full-stack web application to help college students report, find, and recover 
 
 ### 1. Clone / Open Project
 ```
-cd C:\Users\orsui\.gemini\antigravity\scratch\student-lost-found
+cd student-lost-found
 ```
 
 ### 2. Setup PostgreSQL Database
