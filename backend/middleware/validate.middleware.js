@@ -20,7 +20,7 @@ const validateRegister = [
   body('student_id').trim().notEmpty().withMessage('Student ID is required').isLength({ min: 3, max: 20 }),
   body('email').trim().isEmail().withMessage('Invalid email format').normalizeEmail(),
   body('phone').optional().trim().matches(/^[0-9]{10}$/).withMessage('Phone must be 10 digits'),
-  body('department').trim().notEmpty().withMessage('Department is required'),
+  body('department').optional().trim().notEmpty().withMessage('Department cannot be empty if provided'),
   body('year').optional().isInt({ min: 1, max: 6 }).withMessage('Year must be 1-6'),
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')

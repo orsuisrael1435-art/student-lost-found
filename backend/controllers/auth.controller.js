@@ -16,7 +16,7 @@ const register = async (req, res) => {
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
-    const user = await User.create({ student_id, name, email: email.toLowerCase(), phone: phone || null, department, year: year || null, section: section || null, password_hash, role: 'student' });
+    const user = await User.create({ student_id, name, email: email.toLowerCase(), phone: phone || null, department: department || null, year: year || null, section: section || null, password_hash, role: 'student' });
 
     await Notification.create({ user_id: user._id, title: 'Welcome to Lost & Found Portal! 🎉', message: 'Your account has been created successfully.', type: 'info' });
     await ActivityLog.create({ user_id: user._id, action: 'USER_REGISTERED', description: `New student: ${name} (${student_id})`, ip_address: req.ip });
@@ -25,7 +25,7 @@ const register = async (req, res) => {
     res.status(201).json({ success: true, message: 'Account created successfully!', token, user: { id: user._id, student_id: user.student_id, name: user.name, email: user.email, department: user.department, role: user.role } });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
+    res.status(500).json({ success: false, message: error.message || 'Registration failed. Please try again.' });
   }
 };
 
