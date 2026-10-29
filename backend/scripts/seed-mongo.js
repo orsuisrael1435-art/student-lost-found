@@ -35,7 +35,7 @@ const seed = async () => {
 
   // Seed Users
   const users = await User.insertMany([
-    { student_id: '21CSE001', name: 'Israel Orsu',       email: 'israel@college.edu',       phone: '9876543210', department: 'CSE', year: 3, section: 'A', password_hash: hash, role: 'student' },
+    { student_id: '21CSE001', name: 'Alex Johnson',      email: 'student@college.edu',      phone: '9876543210', department: 'CSE', year: 3, section: 'A', password_hash: hash, role: 'student' },
     { student_id: '21CSE002', name: 'Priya Sharma',      email: 'priya@college.edu',         phone: '9876543211', department: 'CSE', year: 2, section: 'B', password_hash: hash, role: 'student' },
     { student_id: '21ECE001', name: 'Rahul Verma',       email: 'rahul@college.edu',         phone: '9876543212', department: 'ECE', year: 3, section: 'A', password_hash: hash, role: 'student' },
     { student_id: 'FAC001',   name: 'Dr. Admin Kumar',   email: 'admin@college.edu',         phone: '9876543213', department: 'CSE', year: null, section: null, password_hash: hash, role: 'admin' },
@@ -89,7 +89,7 @@ const seed = async () => {
 
   console.log('\n🎉 Database seeded successfully!');
   console.log('Demo Credentials (all use Password@123):');
-  console.log('  Student:    israel@college.edu');
+  console.log('  Student:    student@college.edu');
   console.log('  Admin:      admin@college.edu');
   console.log('  SuperAdmin: superadmin@college.edu');
 

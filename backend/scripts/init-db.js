@@ -27,7 +27,7 @@ async function init() {
 
     console.log('\n🎉 Database initialized successfully!');
     console.log('Demo credentials:');
-    console.log('  Student:    israel@college.edu / Password@123');
+    console.log('  Student:    student@college.edu / Password@123');
     console.log('  Admin:      admin@college.edu  / Password@123');
     console.log('  SuperAdmin: superadmin@college.edu / Password@123');
   } catch (err) {

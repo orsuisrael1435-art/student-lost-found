@@ -55,7 +55,7 @@ export default function Register() {
               <form onSubmit={nextStep}>
                 <div className="form-group">
                   <label className="form-label">Full Name <span className="required">*</span></label>
-                  <input name="name" value={form.name} onChange={handle} className="form-control" placeholder="Israel Orsu" required />
+                  <input name="name" value={form.name} onChange={handle} className="form-control" placeholder="Alex Johnson" required />
                 </div>
                 <div className="grid-2">
                   <div className="form-group">

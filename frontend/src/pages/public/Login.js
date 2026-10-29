@@ -26,7 +26,7 @@ export default function Login() {
   };
 
   const fillDemo = (role) => {
-    if (role === 'student') setForm({ email: 'israel@college.edu', password: 'Password@123' });
+    if (role === 'student') setForm({ email: 'student@college.edu', password: 'Password@123' });
     else if (role === 'admin') setForm({ email: 'admin@college.edu', password: 'Password@123' });
   };
 
@@ -53,7 +53,7 @@ export default function Login() {
             <form onSubmit={submit}>
               <div className="form-group">
                 <label className="form-label">Email or Student ID</label>
-                <input name="email" value={form.email} onChange={handle} className="form-control" placeholder="israel@college.edu or 21CSE001" autoComplete="email" />
+                <input name="email" value={form.email} onChange={handle} className="form-control" placeholder="student@college.edu or 21CSE001" autoComplete="email" />
               </div>
               <div className="form-group">
                 <label className="form-label">Password</label>

@@ -19,7 +19,7 @@ A full-stack web application to help college students report, find, and recover 
 
 | Role | Email | Password |
 |------|-------|----------|
-| Student | `israel@college.edu` | `Password@123` |
+| Student | `student@college.edu` | `Password@123` |
 | Admin | `admin@college.edu` | `Password@123` |
 | Super Admin | `superadmin@college.edu` | `Password@123` |
 

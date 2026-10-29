@@ -65,7 +65,7 @@ INSERT INTO rooms (building_id, room_number, floor) VALUES
 INSERT INTO users (student_id, name, email, phone, department, year, section, password_hash, role) VALUES
 ('ADMIN001', 'Dr. Rajesh Kumar', 'admin@college.edu', '9876543210', 'Administration', NULL, NULL, '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'admin'),
 ('SUPER001', 'Prof. Ananya Singh', 'superadmin@college.edu', '9876543200', 'Administration', NULL, NULL, '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'superadmin'),
-('21CSE001', 'Israel Orsu', 'israel@college.edu', '9876501234', 'CSE', 4, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
+('21CSE001', 'Alex Johnson', 'student@college.edu', '9876501234', 'CSE', 4, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
 ('21CSE002', 'Priya Sharma', 'priya@college.edu', '9876502345', 'CSE', 4, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
 ('21CSE003', 'Rahul Verma', 'rahul@college.edu', '9876503456', 'CSE', 3, 'B', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
 ('21ECE001', 'Sneha Patel', 'sneha@college.edu', '9876504567', 'ECE', 2, 'A', '$2a$10$5QcZwDC9ahE/z8/C2T77FOepjdcq3A2pqudaiG65oI7ZwWYQORr7.', 'student'),
